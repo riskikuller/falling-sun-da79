@@ -40,18 +40,21 @@ export class Globe extends Server {
             position: connection.state!.position,
           } satisfies OutgoingMessage),
         );
+      } catch {
+        this.onCloseOrError(conn);
+      }
 
-        // And let's send the new connection's position to all other connections
-        if (connection.id !== conn.id) {
+      if (connection.id !== conn.id) {
+        try {
           connection.send(
             JSON.stringify({
               type: "add-marker",
               position,
             } satisfies OutgoingMessage),
           );
+        } catch {
+          this.onCloseOrError(connection);
         }
-      } catch {
-        this.onCloseOrError(conn);
       }
     }
   }
