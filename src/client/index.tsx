@@ -3,89 +3,70 @@ import "./styles.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 
-type OutputRow = {
-  speedKmh: number;
-  windMs: number;
-  rpm: number;
-  mechanicalKw: number;
-  electricalKw: number;
-  torqueNm: number;
-};
+// The type of messages we'll be receiving from the server
+import type {
+  ActionLogEntry,
+  ActionRequest,
+  IncomingMessage,
+  OutgoingMessage,
+} from "../shared";
+import type { LegacyRef } from "react";
 
-type Insight = {
-  label: string;
-  detail: string;
-};
-
-type Design = {
-  id: string;
-  llmName: string;
-  title: string;
-  tagline: string;
-  summary: string;
-  rotorDiameter: number;
-  cp: number;
-  generatorEfficiency: number;
-  tsr: number;
-  stages?: number;
-  effectiveArea?: number;
-  insights: Insight[];
-  innovationPoints: string[];
-  svg: () => JSX.Element;
-  assumptions: string[];
-};
-
-const AIR_DENSITY = 1.225; // kg/m^3 at sea level
-const SPEED_POINTS = [18, 28, 36, 45]; // km/h wind cases requested by the user
-
-function kmhToMs(speed: number) {
-  return speed / 3.6;
-}
-
-function rotorSweptArea(diameter: number) {
-  const radius = diameter / 2;
-  return Math.PI * radius * radius;
-}
-
-function mechanicalPowerKw(
-  density: number,
-  area: number,
-  cp: number,
-  windSpeed: number,
-) {
-  return 0.5 * density * area * cp * windSpeed ** 3 / 1000;
-}
-
-function computeRpm(speedMs: number, diameter: number, tsr: number) {
-  const circumference = Math.PI * diameter;
-  const tipSpeed = speedMs * tsr;
-  const revolutionsPerSecond = tipSpeed / circumference;
-  return revolutionsPerSecond * 60;
-}
-
-function computeOutputs(design: Design): OutputRow[] {
-  const area = design.effectiveArea ?? rotorSweptArea(design.rotorDiameter);
-  const stages = design.stages ?? 1;
-
-  return SPEED_POINTS.map((speedKmh) => {
-    const windMs = kmhToMs(speedKmh);
-    const rpm = computeRpm(windMs, design.rotorDiameter, design.tsr);
-    const mechanicalKw =
-      mechanicalPowerKw(AIR_DENSITY, area, design.cp, windMs) * stages;
-    const electricalKw = mechanicalKw * design.generatorEfficiency;
-    const torqueNm =
-      rpm === 0
-        ? 0
-        : (mechanicalKw * 1000 * 60) / (2 * Math.PI * rpm);
-
-    return {
-      speedKmh,
-      windMs,
-      rpm,
-      mechanicalKw,
-      electricalKw,
-      torqueNm,
-    };
+function App() {
+  // A reference to the canvas element where we'll render the globe
+  const canvasRef = useRef<HTMLCanvasElement>();
+  // The number of markers we're currently displaying
+  const [counter, setCounter] = useState(0);
+  const [pendingActions, setPendingActions] = useState<ActionRequest[]>([]);
+  const [actionLog, setActionLog] = useState<ActionLogEntry[]>([]);
+  const [deletePath, setDeletePath] = useState("/tmp/example.txt");
+  const [packageName, setPackageName] = useState("lodash");
+  // A map of marker IDs to their positions
+  // Note that we use a ref because the globe's `onRender` callback
+  // is called on every animation frame, and we don't want to re-render
+  // the component on every frame.
+  const positions = useRef<
+    Map<
+      string,
+      {
+        location: [number, number];
+        size: number;
+      }
+    >
+  >(new Map());
+  // Connect to the PartyServer server
+  const socket = usePartySocket({
+    room: "default",
+    party: "globe",
+    onMessage(evt) {
+      const message = JSON.parse(evt.data as string) as
+        | OutgoingMessage
+        | IncomingMessage;
+      if (message.type === "add-marker") {
+        // Add the marker to our map
+        positions.current.set(message.position.id, {
+          location: [message.position.lat, message.position.lng],
+          size: message.position.id === socket.id ? 0.1 : 0.05,
+        });
+        // Update the counter
+        setCounter((c) => c + 1);
+      } else if (message.type === "remove-marker") {
+        // Remove the marker from our map
+        positions.current.delete(message.id);
+        // Update the counter
+        setCounter((c) => c - 1);
+      } else if (message.type === "action:state") {
+        setPendingActions(message.pending);
+        setActionLog(message.log);
+      } else if (message.type === "action:request") {
+        setPendingActions((current) => {
+          if (current.some((action) => action.id === message.action.id)) {
+            return current;
+          }
+          return [message.action, ...current];
+        });
+      }
+    },
   });
 }
 
@@ -96,29 +77,70 @@ function formatNumber(value: number, fractionDigits = 1) {
   });
 }
 
-const designs: (Design & { outputs: OutputRow[]; sweptArea: number })[] = [
-  {
-    id: "axial-flux",
-    llmName: "GPT-4o",
-    title: "12-Rootoriga topelt-aksiaal-fluksi generaator",
-    tagline:
-      "Kompaktne 2,6 m läbimõõduga otsekäiguga lahendus, mis võtab maksimumi neodüümmagnetitest ja õhkjahutusest.",
-    summary:
-      "GPT-4o keskendus suurele tõhususele madalatel tuulekiirustel, pakkudes rootori ja staatori vastanduvaid magnetplaate ning modulaarset statorit kiireks hoolduseks.",
-    rotorDiameter: 2.6,
-    cp: 0.48,
-    generatorEfficiency: 0.92,
-    tsr: 7,
-    insights: [
-      {
-        label: "Magnetpaigutus",
-        detail:
-          "Kaheksa kaldnurga all istuvat NdFeB-plokki rootori kummalgi poolel stabiliseerivad magnetvoogu ja vähendavad lümmeldumist.",
-      },
-      {
-        label: "Jahutus",
-        detail:
-          "Rootoripoolsetesse kanalitesse suunatud ventilaatorlabad loovad Venturi efekti, mis hoiab vasekaod madalal.",
+  const submitDeleteAction = () => {
+    socket.send(
+      JSON.stringify({
+        type: "action:submit",
+        action: {
+          kind: "delete-file",
+          payload: { path: deletePath },
+        },
+      } satisfies IncomingMessage),
+    );
+  };
+
+  const submitInstallAction = () => {
+    socket.send(
+      JSON.stringify({
+        type: "action:submit",
+        action: {
+          kind: "install-package",
+          payload: { packageName },
+        },
+      } satisfies IncomingMessage),
+    );
+  };
+
+  const decideAction = (id: string, decision: "approved" | "rejected") => {
+    socket.send(
+      JSON.stringify({
+        type: "action:decision",
+        id,
+        decision,
+      } satisfies IncomingMessage),
+    );
+  };
+
+  useEffect(() => {
+    // The angle of rotation of the globe
+    // We'll update this on every frame to make the globe spin
+    let phi = 0;
+
+    const globe = createGlobe(canvasRef.current as HTMLCanvasElement, {
+      devicePixelRatio: 2,
+      width: 400 * 2,
+      height: 400 * 2,
+      phi: 0,
+      theta: 0,
+      dark: 1,
+      diffuse: 0.8,
+      mapSamples: 16000,
+      mapBrightness: 6,
+      baseColor: [0.3, 0.3, 0.3],
+      markerColor: [0.8, 0.1, 0.1],
+      glowColor: [0.2, 0.2, 0.2],
+      markers: [],
+      opacity: 0.7,
+      onRender: (state) => {
+        // Called on every animation frame.
+        // `state` will be an empty object, return updated params.
+
+        // Get the current positions from our map
+        state.markers = [...positions.current.values()];
+
+        // Rotate the globe
+        state.phi = phi;
+        phi += 0.01;
       },
       {
         label: "Tippvõimsus",
@@ -561,126 +583,121 @@ function ProductivityExplainer() {
         Sama protsessi rakendati kõigile LLM-ide kontseptsioonidele, arvestades nende pakutud geomeetriat, η väärtusi ja
         mitmeastmelisust. Nii saame võrrelda tootlikkust otse erinevatel tuulekiirustel (km/h).
       </p>
-    </section>
-  );
-}
 
-function Methodology() {
-  return (
-    <section className="methodology" id="methodology">
-      <h2>Metoodika ja valikukriteeriumid</h2>
-      <div className="method-grid">
-        <div>
-          <h3>LLM-i panus</h3>
-          <p>
-            Kogusime ideid kolmest suurest mudelist (GPT-4o, Claude 3.5 Sonnet ja Gemini 2.0) ning palusime igal pakkuda maksimaalse kW
-            saavutamiseks erineva arhitektuuri.
-          </p>
-        </div>
-        <div>
-          <h3>Inseneripõhimõtted</h3>
-          <ul>
-            <li>Jälgisime aerodünaamilist võimekust (C<sub>p</sub>) ja TSR-i vahemikke.</li>
-            <li>Arvestasime generatsiooni efektiivsust, sealhulgas jahutust ja kaableid.</li>
-            <li>Korrigeerisime multiastmelised süsteemid (stages) vastavalt torni geomeetriale.</li>
-          </ul>
-        </div>
-        <div>
-          <h3>Väljundi normaliseerimine</h3>
-          <p>
-            Kõik tulemused on normaliseeritud standardse merepinna õhutiheduse ja kuiva õhu korral, et erinevad kontseptsioonid oleksid
-            võrreldavad.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Callout() {
-  const topDesign = designs.reduce((best, current) => {
-    const currentBest = current.outputs[current.outputs.length - 1];
-    const bestBest = best.outputs[best.outputs.length - 1];
-    return currentBest.electricalKw > bestBest.electricalKw ? current : best;
-  }, designs[0]);
-  const topPeak = topDesign.outputs[topDesign.outputs.length - 1];
-
-  return (
-    <section className="callout" aria-labelledby="callout-title">
-      <h2 id="callout-title">Kõige suurema kW annab …</h2>
-      <p>
-        Võitjaks osutub <strong>{topDesign.title}</strong> ({topDesign.llmName}), mis saavutab {formatNumber(topPeak.electricalKw)} kW
-        45 km/h tuulega. Selle edu võti on kaheastmeline lineaar-generaator ja ülijuhtiv stator, mis lubab harukordset 95%
-        efektiivsust.
-      </p>
-      <p>
-        Samas jääb aksiaal-fluksi kontseptsioon parimaks madalamatel kiirustel – see saavutab 135 kW juba 36 km/h juures ja sobib võrgu
-        stabiilsust nõudvatesse projektidesse.
-      </p>
-    </section>
-  );
-}
-
-function NextSteps() {
-  return (
-    <section className="next-steps" id="next">
-      <h2>Järgmised sammud ja prototüübi mõtted</h2>
-      <ul>
-        <li>
-          <strong>Digitaalne kaksik:</strong> Looge CFD ja elektromagnetilised simulatsioonid, et valideerida LLM-i poolt pakutud
-          geomeetriat.
-        </li>
-        <li>
-          <strong>Modulaarne laboritest:</strong> Alustage aksiaal-fluksi moodulist – seda on lihtsaim kiirprototüübiks printida ja
-          testida.
-        </li>
-        <li>
-          <strong>Energia salvestus:</strong> Kaaluge superkondensaatorite ja lendrataste kombinatsiooni, et tasandada muutlikke
-          tuuleprofiile.
-        </li>
-        <li>
-          <strong>KM/h jälgimine:</strong> Paigaldage lidar-andurid ja pöördemomendi mõõtmine, mis võimaldab live'is korrigeerida TSR-i
-          ning saavutada maksimaalne C<sub>p</sub>.
-        </li>
-      </ul>
-    </section>
-  );
-}
-
-function App() {
-  return (
-    <main className="layout">
-      <header className="hero">
-        <p className="eyebrow">LLM showdown · Tuulegeneraatorite ideelabor</p>
-        <h1>Kolm tulevikukindlat generaatorit, mille siht on maksimaalne kW</h1>
-        <p>
-          Tegime uuesti LLM-ide võrdluse ja keskendusime seekord sellele, milline mudel suudab pakkuda kõige suuremat ning
-          efektiivsemat tuulegeneraatori lahendust. Allpool on tulemused – koos jooniste, arvutuste ning KM/h-põhise tootlikkuse
-          analüüsiga.
+      <section className="dashboard">
+        <h2>Action approvals</h2>
+        <p className="dashboard__subtitle">
+          Sensitive actions emit an approval request before they execute.
         </p>
-        <nav className="hero-nav">
-          <a href="#axial-flux">Aksiaal-fluksi lahendus</a>
-          <a href="#dual-stage">Mitme rootoriga torn</a>
-          <a href="#superconductor">Supraduktiivne kontuur</a>
-          <a href="#comparison">Võrdlus</a>
-          <a href="#productivity">KM/h arvutus</a>
-        </nav>
-      </header>
-      <Callout />
-      <Methodology />
-      {designs.map((design) => (
-        <DesignCard design={design} key={design.id} />
-      ))}
-      <ComparisonTable />
-      <ProductivityExplainer />
-      <NextSteps />
-      <footer className="footer">
-        <p>
-          Kõik arvutused põhinevad ideaalsetel tingimustel. Soovitame läbi viia detailse FEM ja CFD simulatsiooni enne tegeliku prototüübi
-          tootmist.
-        </p>
-      </footer>
-    </main>
+
+        <div className="dashboard__panels">
+          <div className="dashboard__panel">
+            <h3>Request an action</h3>
+            <div className="dashboard__form">
+              <label className="dashboard__field">
+                Delete file path
+                <input
+                  value={deletePath}
+                  onChange={(event) => setDeletePath(event.target.value)}
+                />
+                <button type="button" onClick={submitDeleteAction}>
+                  Request delete
+                </button>
+              </label>
+              <label className="dashboard__field">
+                Install package
+                <input
+                  value={packageName}
+                  onChange={(event) => setPackageName(event.target.value)}
+                />
+                <button type="button" onClick={submitInstallAction}>
+                  Request install
+                </button>
+              </label>
+            </div>
+          </div>
+
+          <div className="dashboard__panel">
+            <h3>Pending approvals</h3>
+            {pendingActions.length === 0 ? (
+              <p className="dashboard__empty">No pending approvals.</p>
+            ) : (
+              <ul className="dashboard__list">
+                {pendingActions.map((action) => (
+                  <li key={action.id} className="dashboard__item">
+                    <div>
+                      <strong>{action.kind}</strong>
+                      <span className="dashboard__meta">
+                        Requested by {action.requestedBy}
+                      </span>
+                      {"path" in action.payload ? (
+                        <span className="dashboard__detail">
+                          Path: {action.payload.path}
+                        </span>
+                      ) : (
+                        <span className="dashboard__detail">
+                          Package: {action.payload.packageName}
+                        </span>
+                      )}
+                    </div>
+                    <div className="dashboard__actions">
+                      <button
+                        type="button"
+                        onClick={() => decideAction(action.id, "approved")}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => decideAction(action.id, "rejected")}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="dashboard__panel">
+          <h3>Decision log</h3>
+          {actionLog.length === 0 ? (
+            <p className="dashboard__empty">No actions have been reviewed.</p>
+          ) : (
+            <ul className="dashboard__list">
+              {actionLog.map((entry) => (
+                <li key={entry.id} className="dashboard__item">
+                  <div>
+                    <strong>
+                      {entry.kind} ({entry.status})
+                    </strong>
+                    <span className="dashboard__meta">
+                      Reviewed by {entry.decidedBy}
+                    </span>
+                    {"path" in entry.payload ? (
+                      <span className="dashboard__detail">
+                        Path: {entry.payload.path}
+                      </span>
+                    ) : (
+                      <span className="dashboard__detail">
+                        Package: {entry.payload.packageName}
+                      </span>
+                    )}
+                    {entry.result ? (
+                      <span className="dashboard__detail">
+                        Result: {entry.result}
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
