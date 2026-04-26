@@ -42,3 +42,8 @@ A live public deployment of this template is available at [https://multiplayer-g
    ```bash
    npx wrangler deploy
    ```
+
+
+## Contributing
+
+Contributions are welcome! Please open a pull request with your changes.
