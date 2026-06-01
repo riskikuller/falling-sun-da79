@@ -154,3 +154,128 @@ Power \( P = 260 \times 123.4 ≈ 32.1 \text{ kW} \). Allowing for 90% gearbox e
 4. **Experimental validation**: Build a 1:5 scale prototype using 3D-printed tooling and measure no-load EMF & short-circuit current to back out actual flux density.
 
 These concepts balance efficiency and manufacturability while pushing toward the highest practical kW output in compact permanent magnet generator systems.
+
+---
+
+## Eestikeelne ehitusjuhis: suure väljundvõimsusega püsimagnetgeneraatori prototüüp
+
+Allpool on samm-sammuline ehitusjuhis, mis sobib nii aksiaal- kui ka toroidse (SMC) statoriga kontseptide jaoks. Iga sammu juures on lühike eesmärk ja kontrollnimekiri.
+
+### 1. Materjalid ja tööriistad
+**Eesmärk:** Koondada kõik vajalikud komponendid ja valmistamisvahendid, et vältida katkestusi ehituse käigus.
+
+**Soovituslik nimekiri**
+* **Magnetid:** N52/N50 NdFeB plaadid või Halbach-segmendid, epoksü- või niklkattega.
+* **Statori mähised:** lakitud vask, litz‑juhe (nt 100×0,2 mm või 200×0,1 mm), soojusklass vähemalt 180 °C.
+* **SMC või laminaadid:** pehme magnetkomposiit (SMC) torus või õhukesed laminaadid (0,2–0,35 mm).
+* **Jahutus:** mikrokanalitega statoriplaat, veepump (12–24 V), alumiinium- või vaskjahuti, voolikud, vooluhulgamõõtur.
+* **Tööriistad:** 3D‑printer (vormid), mähkimispink, press, momendivõtmega kruvikeeraja, mõõtekell, mikromeeter, IR-termokaamera.
+
+**Kontrollnimekiri**
+* [ ] Magnetid on õigete mõõtude ja polaarsusega ning kaitsekihiga.
+* [ ] Litz‑juhe ja lakid on sobiva soojusklassiga.
+* [ ] Jahutuse komponendid sobituvad planeeritud kanalite geomeetriaga.
+* [ ] Mõõtevahendid (mikromeeter, mõõtekell) on kalibreeritud.
+
+### 2. Rotor/statori 3D‑mudelite ettevalmistus ja tolerantsid
+**Eesmärk:** Tagada korrektne õhuvahe, magnetite täpne paigutus ja kokkupaneku korduvus.
+
+**Soovitused**
+* **Õhuvahe:** planeeri 0,6–1,2 mm; prototüübis jäta reguleeritav shimmi‑vahemik ±0,3 mm.
+* **Magnetipaigutus:** 3D‑mudelis lukud/sooned magnetite nihke vältimiseks, säti tolerantsid +0,05 / −0,00 mm.
+* **Statori vorm:** määra mähiste akende ja kanalite paiknemine; jäta 0,2–0,4 mm lakile/impregneerimisele.
+* **Tasakaalustamine:** lisa tasakaalustusraskuste kohad või puurimiskohad.
+
+**Kontrollnimekiri**
+* [ ] CAD‑mudelil on eraldi kihid rotorile, statorile, magnetitele ja shimmidele.
+* [ ] Õhuvahe on kontrollitud igas sektoris (mitte ainult keskmises).
+* [ ] Magnetite sisselõiked/sooned tagavad positsiooni korduvuse.
+* [ ] 3D‑printide või CNC‑detailide tolerantsid on dokumenteeritud.
+
+### 3. Mähiste valmistus
+**Eesmärk:** Saada ühtlase takistuse ja induktiivsusega mähised, mis kannatavad sihtvoolu.
+
+**Soovitused**
+* **Pöörete arv:** arvuta eesmärgistatud faasipingest (no‑load EMF) ja sihtpöördest; prototüübis kasuta 10–20% varu.
+* **Traadidiameeter:** vali nii, et voolutihedus jääks ≤6 A/mm² (jahutusega) või ≤4 A/mm² (õhkjahutus).
+* **Lakistus:** topeltlakistus (impregneerimisvaik + pealiskate) vähendab vibratsiooni ja koronat.
+* **Litz‑juhe:** eelistada kõrgsagedusliku kadude vähendamiseks; hoida ühtlane keerdsamm.
+
+**Kontrollnimekiri**
+* [ ] Iga mähise takistus erineb ≤2% võrreldes keskmisega.
+* [ ] Pöörete arv ja suund on märgistatud igal mähisel.
+* [ ] Litz‑juhe ei ole kahjustatud ja isolatsioon on terve.
+* [ ] Mähiste mõõtmed sobituvad statoripesa tolerantsidega.
+
+### 4. Statori impregneerimine ja mehaaniline kinnitamine
+**Eesmärk:** Stabiliseerida mähised, vähendada müra ning tagada termiline ja mehaaniline vastupidavus.
+
+**Soovitused**
+* **Impregneerimine:** vaakum‑impregneerimine epoksü- või polüestervaiguga; kuivatus 80–120 °C vastavalt andmelehele.
+* **Mehaaniline fikseerimine:** kasutage kinnituspolte, kiile või sidumissüsteeme; väldi magnetvoo lühistamist.
+* **Termiline kontakt:** lisa soojusjuhtiv täiteaine (nt AlN või BN) jahutuspinnale.
+
+**Kontrollnimekiri**
+* [ ] Mähised ei liigu käsitsi kontrollimisel.
+* [ ] Vaigu kõvastus on ühtlane, ei ole õhutaskuid.
+* [ ] Stator on joondatud rootoriga, mõõdetud run‑out ≤0,05 mm.
+* [ ] Termopasta või soojusjuhtiv täide on ühtlane ja katab kontaktpinnad.
+
+### 5. Jahutusringi ehitamine
+**Eesmärk:** Hoida mähiste ja magnetite temperatuur allpool kriitilisi piire.
+
+**Soovitused**
+* **Mikrokanalid:** 1–2 mm kanalilaius, vältida järske pöördeid; katseta rõhukadu.
+* **Pump:** vali 1–3 l/min vooluhulk, jälgi rõhukõverat.
+* **Jahuti:** alumiiniumist radiaator + ventilaator; vajadusel lisada reservmaht.
+* **Andurid:** temperatuuriandurid statoril, rootorikattel ja jahutusvedelikul.
+
+**Kontrollnimekiri**
+* [ ] Lekke test (5–10 min) on korras.
+* [ ] Vooluhulk vastab sihtväärtusele (±10%).
+* [ ] Termoandurid on loetavad ja õigesti kalibreeritud.
+* [ ] Jahutusring on elektriliselt isoleeritud mähistest.
+
+### 6. Elektriline ühendus
+**Eesmärk:** Luua turvaline 3‑faasiline ühendus mõõte- ja alalduspunktidega.
+
+**Soovitused**
+* **3‑faas:** tähis (Y) või kolmnurk (Δ) vastavalt sihtpingele.
+* **SiC alaldi:** 3‑faasiline sild, vali pingereiting ≥2× maksimaalne faasipinge.
+* **Mõõtepunktid:** faas‑faas pinge, faasivool, DC‑bus pinge, temperatuuriandurid.
+* **Kaitsed:** kiire kaitse (sulavkaitse või elektrooniline), pehme käivitus.
+
+**Kontrollnimekiri**
+* [ ] Faaside järjestus on märgitud ja kontrollitud.
+* [ ] Alaldi kinnitused on termiliselt juhitud (radiaator).
+* [ ] Mõõtepunktid on hõlpsalt ligipääsetavad ja kaitstud.
+* [ ] Isolatsioonitakistus >1 MΩ.
+
+### 7. Esmane tühikäigu test ja lühisvoolu mõõtmine
+**Eesmärk:** Kinnitada, et EMF ja lühisvool on mudelitega kooskõlas ning tuvastada probleemid varakult.
+
+**Soovitused**
+* **Tühikäik:** mõõda faas‑faas pinge vs pöörded; võrdle eeldatud EMF‑iga.
+* **Lühisvool:** lühista faasid läbi mõõteahela (shunt), hoia test lühike.
+* **Vibratsioon:** jälgi rootori tasakaalu; vajadusel tasakaalusta.
+
+**Kontrollnimekiri**
+* [ ] Tühikäigupinge on ±10% prognoosist.
+* [ ] Lühisvool ei ületa mähiste termilist piiri.
+* [ ] Müra ja vibratsioon on normi piires.
+* [ ] Termopildid ei näita lokaalseid kuumpunkte.
+
+### 8. Turvalisus
+**Eesmärk:** Vähendada riske magnetite, pöörlevate osade ja kuumuse käsitlemisel.
+
+**Soovitused**
+* **Magnetid:** hoia vahed, kasuta kindaid ja mittemagnetilisi tööriistu.
+* **Pöörlevad osad:** kata rootor kaitsekestaga; kasuta turvapiirdeid.
+* **Kuumuskaitse:** paigalda ületemperatuuri lülitid, termokaitsed.
+* **Elektriohutus:** maandus, RCD ning eraldustrafo testideks.
+
+**Kontrollnimekiri**
+* [ ] Magnetite kokkupõrke risk on minimeeritud (vahed, hoidikud).
+* [ ] Pöörlevad osad on täielikult kaetud testimise ajal.
+* [ ] Ületemperatuuri kaitse lülitub ootuspäraselt.
+* [ ] Elektriahelad on maandatud ja selgelt märgistatud.
